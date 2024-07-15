@@ -55,7 +55,7 @@ systemctl start satisfactory
 cat << 'EOF' > /home/ubuntu/auto-shutdown.sh
 #!/bin/sh
 
-shutdownIdleMinutes=30
+shutdownIdleMinutes=15
 idleCheckFrequencySeconds=1
 
 isIdle=0

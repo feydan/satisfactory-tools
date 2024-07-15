@@ -6,7 +6,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3_assets from 'aws-cdk-lib/aws-s3-assets';
 import * as lambda_nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as apigw from 'aws-cdk-lib/aws-apigateway';
+import { Runtime, FunctionUrlAuthType } from 'aws-cdk-lib/aws-lambda';
 
 export class ServerHostingStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -142,7 +142,8 @@ export class ServerHostingStack extends Stack {
       const startServerLambda = new lambda_nodejs.NodejsFunction(this, `${Config.prefix}StartServerLambda`, {
         entry: './server-hosting/lambda/index.ts',
         description: "Restart game server",
-        timeout: Duration.seconds(10),
+        timeout: Duration.seconds(20),
+        runtime: Runtime.NODEJS_20_X,
         environment: {
           INSTANCE_ID: server.instanceId
         }
@@ -150,16 +151,24 @@ export class ServerHostingStack extends Stack {
 
       startServerLambda.addToRolePolicy(new iam.PolicyStatement({
         actions: [
-          'ec2:StartInstances',
+          'ec2:StartInstances'
         ],
         resources: [
           `arn:aws:ec2:*:${Config.account}:instance/${server.instanceId}`,
         ]
       }))
 
-      new apigw.LambdaRestApi(this, `${Config.prefix}StartServerApi`, {
-        handler: startServerLambda,
-        description: "Trigger lambda function to start server",
+      startServerLambda.addToRolePolicy(new iam.PolicyStatement({
+        actions: [
+          "ec2:DescribeInstances"
+        ],
+        resources: [
+          '*'
+        ]
+      }))
+
+      startServerLambda.addFunctionUrl({
+        authType: FunctionUrlAuthType.NONE
       })
     }
   }
