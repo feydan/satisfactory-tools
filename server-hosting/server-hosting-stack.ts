@@ -66,7 +66,7 @@ export class ServerHostingStack extends Stack {
     securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(15777), "Query port")
 
     const server = new ec2.Instance(this, `${prefix}Server`, {
-      // 2 vCPU, 8 GB RAM should be enough for most factories
+      // 4 vCPU, 16 GB RAM should be enough for most factories
       instanceType: new ec2.InstanceType("m7i-flex.xlarge"),
       // get exact ami from parameter exported by canonical
       // https://discourse.ubuntu.com/t/finding-ubuntu-images-with-the-aws-ssm-parameter-store/15507
@@ -161,6 +161,15 @@ export class ServerHostingStack extends Stack {
       startServerLambda.addToRolePolicy(new iam.PolicyStatement({
         actions: [
           "ec2:DescribeInstances"
+        ],
+        resources: [
+          '*'
+        ]
+      }))
+      
+      startServerLambda.addToRolePolicy(new iam.PolicyStatement({
+        actions: [
+          "ce:GetCostAndUsage"
         ],
         resources: [
           '*'
