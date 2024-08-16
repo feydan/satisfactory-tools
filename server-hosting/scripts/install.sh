@@ -27,13 +27,15 @@ fi
 # note, we are switching users because steam doesn't recommend running steamcmd as root
 su - ubuntu -c "$STEAM_INSTALL_SCRIPT"
 
+BLUEPRINT_SAVE_DIR="/home/ubuntu/.config/Epic/FactoryGame/Saved/SaveGames/blueprints"
 EPIC_SAVE_DIR="/home/ubuntu/.config/Epic/FactoryGame/Saved/SaveGames/server"
 STEAM_DIR="/home/ubuntu/.steam/SteamApps/common/SatisfactoryDedicatedServer"
 CONFIG_DIR="$STEAM_DIR/FactoryGame/Saved/Config"
 CONFIG_SERVER_DIR="$CONFIG_DIR/LinuxServer"
 
 # pull down any saved files to new instances
-su - ubuntu -c "mkdir -p $EPIC_SAVE_DIR $CONFIG_DIR"
+su - ubuntu -c "mkdir -p $EPIC_SAVE_DIR $CONFIG_DIR $BLUEPRINT_SAVE_DIR"
+su - ubuntu -c "/usr/local/bin/aws s3 sync s3://$S3_SAVE_BUCKET/blueprints $BLUEPRINT_SAVE_DIR"
 su - ubuntu -c "/usr/local/bin/aws s3 sync s3://$S3_SAVE_BUCKET/saves $EPIC_SAVE_DIR"
 su - ubuntu -c "/usr/local/bin/aws s3 sync s3://$S3_SAVE_BUCKET/config $CONFIG_DIR"
 su - ubuntu -c "mkdir -p $CONFIG_SERVER_DIR"
@@ -94,6 +96,7 @@ while [ \$isIdle -le 0 ]; do
     done
 done
 
+sudo /usr/local/bin/aws s3 sync $BLUEPRINT_SAVE_DIR s3://$S3_SAVE_BUCKET/blueprints
 sudo /usr/local/bin/aws s3 sync $EPIC_SAVE_DIR s3://$S3_SAVE_BUCKET/saves
 sudo /usr/local/bin/aws s3 sync $CONFIG_DIR s3://$S3_SAVE_BUCKET/config
 
