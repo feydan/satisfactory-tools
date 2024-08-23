@@ -5,7 +5,8 @@
 #  2: true|false - whether to use Satisfactory Experimental build (optional, default false)
 S3_SAVE_BUCKET=$1
 USE_EXPERIMENTAL_BUILD=${2-false}
-
+DUCK_DNS_TOKEN=$3
+DUCK_DNS_DOMAIN=$4
 
 # install steamcmd: https://developer.valvesoftware.com/wiki/SteamCMD?__cf_chl_jschl_tk__=pmd_WNQPOiK18.h0rf16RCYrARI2s8_84hUMwT.7N1xHYcs-1635248050-0-gqNtZGzNAiWjcnBszQiR#Linux.2FmacOS)
 add-apt-repository multiverse
@@ -37,7 +38,7 @@ After=syslog.target network.target nss-lookup.target network-online.target
 [Service]
 Environment="LD_LIBRARY_PATH=./linux64"
 ExecStartPre=$STEAM_INSTALL_SCRIPT
-ExecStart=/home/ubuntu/.steam/steamapps/common/SatisfactoryDedicatedServer/FactoryServer.sh
+ExecStart=/home/ubuntu/.steam/steamapps/common/SatisfactoryDedicatedServer/FactoryServer.sh -multihome=0.0.0.0
 User=ubuntu
 Group=ubuntu
 StandardOutput=journal
@@ -51,7 +52,7 @@ EOF
 systemctl enable satisfactory
 systemctl start satisfactory
 
-# enable auto shutdown: https://github.com/feydan/satisfactory-tools/tree/main/shutdown
+# enable auto shutdown: https://github.com/feydan/satisfactory-tools/tree/main/server-hosting/scripts/auto-shutdown.sh
 cat << 'EOF' > /home/ubuntu/auto-shutdown.sh
 #!/bin/sh
 
@@ -102,6 +103,48 @@ WantedBy=multi-user.target
 EOF
 systemctl enable auto-shutdown
 systemctl start auto-shutdown
+
+# enable duck dns: https://github.com/feydan/satisfactory-tools/tree/main/server-hosting/scripts/duck-dns.sh
+cat << EOF > /home/ubuntu/duck-dns.sh
+#!/bin/sh
+
+# Configuration
+DOMAIN="$DUCK_DNS_DOMAIN"
+TOKEN="$DUCK_DNS_TOKEN"
+
+# Get the instance's public IP
+IP=\$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+
+# Update Duck DNS
+# https://www.duckdns.org/update?domains={YOURVALUE}&token={YOURVALUE}[&ip={YOURVALUE}][&ipv6={YOURVALUE}][&verbose=true][&clear=true]
+URL="https://www.duckdns.org/update?domains=\$DOMAIN&token=\$TOKEN&ip=\$IP"
+
+RESPONSE=\$(curl -s \$URL)
+
+# Check if the update was successful
+if [ "\$RESPONSE" = "OK" ]; then
+    echo "Duck DNS updated successfully with IP: \$IP"
+else
+    echo "Failed to update Duck DNS"
+fi
+EOF
+chmod +x /home/ubuntu/duck-dns.sh
+chown ubuntu:ubuntu /home/ubuntu/duck-dns.sh
+
+cat << 'EOF' > /etc/systemd/system/duck-dns.service
+[Unit]
+Description=Update Duck DNS with the current IP on startup
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/ubuntu/duck-dns.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl enable duck-dns
+systemctl start duck-dns
 
 # automated backups to s3 every 5 minutes
 su - ubuntu -c "crontab -l -e ubuntu | { cat; echo \"*/5 * * * * /usr/local/bin/aws s3 sync /home/ubuntu/.config/Epic/FactoryGame/Saved/SaveGames/server s3://$S3_SAVE_BUCKET\"; } | crontab -"
