@@ -38,7 +38,7 @@ After=syslog.target network.target nss-lookup.target network-online.target
 [Service]
 Environment="LD_LIBRARY_PATH=./linux64"
 ExecStartPre=$STEAM_INSTALL_SCRIPT
-ExecStart=/home/ubuntu/.steam/steamapps/common/SatisfactoryDedicatedServer/FactoryServer.sh
+ExecStart=/home/ubuntu/.steam/steamapps/common/SatisfactoryDedicatedServer/FactoryServer.sh -multihome=0.0.0.0
 User=ubuntu
 Group=ubuntu
 StandardOutput=journal
@@ -114,11 +114,10 @@ TOKEN="$DUCK_DNS_TOKEN"
 
 # Get the instance's public IP
 IP=\$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
-IPV6=\$(curl -s http://169.254.169.254/latest/meta-data/public-ipv6)
 
 # Update Duck DNS
 # https://www.duckdns.org/update?domains={YOURVALUE}&token={YOURVALUE}[&ip={YOURVALUE}][&ipv6={YOURVALUE}][&verbose=true][&clear=true]
-URL="https://www.duckdns.org/update?domains=\$DOMAIN&token=\$TOKEN&ip=\$IP&ipv6=\$IPV6"
+URL="https://www.duckdns.org/update?domains=\$DOMAIN&token=\$TOKEN&ip=\$IP"
 
 RESPONSE=\$(curl -s \$URL)
 
