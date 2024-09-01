@@ -14,7 +14,7 @@ exports.handler = async function (event: any) {
     const month = new Date().getMonth() + 1
     const textMonth = month < 10 ? `0${month}` : month;
     const year = new Date().getFullYear()
-    const d = new Date(year, month + 1, 0).getDate()
+    const d = new Date(year, month, 0).getDate()
 
     const commandCost = new GetCostAndUsageCommand({
       TimePeriod: {
