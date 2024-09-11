@@ -1,6 +1,6 @@
 {
   "name": "server-hosting",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "bin": {
     "server-hosting": "server-hosting/server-hosting.js"
   },
@@ -10,16 +10,16 @@
     "cdk": "cdk"
   },
   "devDependencies": {
-    "@types/node": "10.17.27",
-    "aws-cdk": "2.3.0",
-    "ts-node": "^9.0.0",
-    "typescript": "~3.9.7",
-    "@aws-sdk/client-ec2": "3.45.0",
-    "esbuild": "0.14.10"
+    "@types/node": "^20.5.0",
+    "aws-cdk": "^2.154.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4",
+    "@aws-sdk/client-ec2": "^3.636.0",
+    "esbuild": "^0.23.1"
   },
   "dependencies": {
-    "aws-cdk-lib": "2.3.0",
-    "constructs": "^10.0.0",
-    "source-map-support": "^0.5.16"
+    "aws-cdk-lib": "^2.154.0",
+    "constructs": "^10.3.0",
+    "source-map-support": "^0.5.21"
   }
 }
