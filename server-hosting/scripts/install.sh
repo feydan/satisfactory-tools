@@ -100,7 +100,7 @@ After=syslog.target network.target nss-lookup.target network-online.target
 [Service]
 Environment="LD_LIBRARY_PATH=./linux64"
 ExecStartPre=$STEAM_INSTALL_SCRIPT
-ExecStart=$STEAM_DIR/FactoryServer.sh -multihome=0.0.0.0
+ExecStart=$STEAM_DIR/FactoryServer.sh
 User=ubuntu
 Group=ubuntu
 StandardOutput=journal
