@@ -37,13 +37,13 @@ After=syslog.target network.target nss-lookup.target network-online.target
 [Service]
 Environment="LD_LIBRARY_PATH=./linux64"
 ExecStartPre=$STEAM_INSTALL_SCRIPT
-ExecStart=/home/ubuntu/.steam/steamapps/common/SatisfactoryDedicatedServer/FactoryServer.sh
+ExecStart=/home/ubuntu/.steam/SteamApps/common/SatisfactoryDedicatedServer/FactoryServer.sh -ServerQueryPort=15777 -BeaconPort=15000 -Port=7777 -log -unattended
 User=ubuntu
 Group=ubuntu
 StandardOutput=journal
 Restart=on-failure
 KillSignal=SIGINT
-WorkingDirectory=/home/ubuntu/.steam/steamapps/common/SatisfactoryDedicatedServer
+WorkingDirectory=/home/ubuntu/.steam/SteamApps/common/SatisfactoryDedicatedServer
 
 [Install]
 WantedBy=multi-user.target
@@ -51,7 +51,7 @@ EOF
 systemctl enable satisfactory
 systemctl start satisfactory
 
-# enable auto shutdown: https://github.com/feydan/satisfactory-tools/tree/main/shutdown
+# enable auto shutdown: https://github.com/feydan/satisfactory-tools/tree/main/server-hosting/scripts/auto-shutdown.sh
 cat << 'EOF' > /home/ubuntu/auto-shutdown.sh
 #!/bin/sh
 
@@ -104,4 +104,4 @@ systemctl enable auto-shutdown
 systemctl start auto-shutdown
 
 # automated backups to s3 every 5 minutes
-su - ubuntu -c "crontab -l -e ubuntu | { cat; echo \"*/5 * * * * /usr/local/bin/aws s3 sync /home/ubuntu/.config/Epic/FactoryGame/Saved/SaveGames/server s3://$S3_SAVE_BUCKET\"; } | crontab -"
+su - ubuntu -c "crontab -u ubuntu -l | { cat; echo \"*/5 * * * * /usr/local/bin/aws s3 sync /home/ubuntu/.config/Epic/FactoryGame/Saved/SaveGames/server s3://$S3_SAVE_BUCKET\"; } | crontab -"
