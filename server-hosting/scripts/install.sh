@@ -37,7 +37,7 @@ After=syslog.target network.target nss-lookup.target network-online.target
 [Service]
 Environment="LD_LIBRARY_PATH=./linux64"
 ExecStartPre=$STEAM_INSTALL_SCRIPT
-ExecStart=/home/ubuntu/.steam/SteamApps/common/SatisfactoryDedicatedServer/FactoryServer.sh
+ExecStart=/home/ubuntu/.steam/SteamApps/common/SatisfactoryDedicatedServer/FactoryServer.sh -ServerQueryPort=15777 -BeaconPort=15000 -Port=7777 -log -unattended
 User=ubuntu
 Group=ubuntu
 StandardOutput=journal
@@ -51,7 +51,7 @@ EOF
 systemctl enable satisfactory
 systemctl start satisfactory
 
-# enable auto shutdown: https://github.com/feydan/satisfactory-tools/tree/main/shutdown
+# enable auto shutdown: https://github.com/feydan/satisfactory-tools/tree/main/server-hosting/scripts/auto-shutdown.sh
 cat << 'EOF' > /home/ubuntu/auto-shutdown.sh
 #!/bin/sh
 

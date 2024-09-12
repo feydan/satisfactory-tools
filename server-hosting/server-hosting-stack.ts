@@ -61,9 +61,12 @@ export class ServerHostingStack extends Stack {
       description: "Allow Satisfactory client to connect to server",
     })
 
-    securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(7777), "Game port")
-    securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(15000), "Beacon port")
-    securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(15777), "Query port")
+    securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(7777), "Game port UDP")
+    securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(15000), "Beacon port UDP")
+    securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(15777), "Query port UDP")
+    securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(7777), "Game port TCP")
+    securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(15000), "Beacon port TCP")
+    securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(15777), "Query port TCP")
 
     const server = new ec2.Instance(this, `${prefix}Server`, {
       // 2 vCPU, 8 GB RAM should be enough for most factories
