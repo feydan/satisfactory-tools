@@ -63,15 +63,15 @@ export class ServerHostingStack extends Stack {
 
     securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(7777), "Game port UPD ipv4")
     securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(7777), "Game port TCP ipv4")
-    securityGroup.addIngressRule(ec2.Peer.anyIpv6(), ec2.Port.udp(7777), "Game port UPD ipv4")
-    securityGroup.addIngressRule(ec2.Peer.anyIpv6(), ec2.Port.tcp(7777), "Game port TCP ipv4")
+    securityGroup.addIngressRule(ec2.Peer.anyIpv6(), ec2.Port.udp(7777), "Game port UPD ipv6")
+    securityGroup.addIngressRule(ec2.Peer.anyIpv6(), ec2.Port.tcp(7777), "Game port TCP ipv6")
 
     securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(15000), "Beacon port")
     securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(15777), "Query port")
 
     const server = new ec2.Instance(this, `${prefix}Server`, {
       // 4 vCPU, 16 GB RAM should be enough for most factories
-      instanceType: new ec2.InstanceType("m7i.xlarge"),
+      instanceType: new ec2.InstanceType("r7i.xlarge"),
       // get exact ami from parameter exported by canonical
       // https://discourse.ubuntu.com/t/finding-ubuntu-images-with-the-aws-ssm-parameter-store/15507
       machineImage: ec2.MachineImage.fromSsmParameter("/aws/service/canonical/ubuntu/server/20.04/stable/current/amd64/hvm/ebs-gp2/ami-id"),
@@ -79,7 +79,7 @@ export class ServerHostingStack extends Stack {
       blockDevices: [
         {
           deviceName: "/dev/sda1",
-          volume: ec2.BlockDeviceVolume.ebs(30, {volumeType: ec2.EbsDeviceVolumeType.GP3}),
+          volume: ec2.BlockDeviceVolume.ebs(50, {volumeType: ec2.EbsDeviceVolumeType.GP3}),
         }
       ],
       // server needs a public ip to allow connections
