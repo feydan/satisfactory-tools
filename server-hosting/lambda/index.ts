@@ -5,7 +5,7 @@ const instanceId = process.env.INSTANCE_ID
 const client = new EC2Client({ region: process.env.AWS_REGION });
 const command = new StartInstancesCommand({ InstanceIds: [instanceId!] });
 const clientPricing = new CostExplorerClient();
-
+const styleSheetLink = "https://unpkg.com/mvp.css"
 
 exports.handler = async function (event: any) {
 
@@ -63,14 +63,13 @@ exports.handler = async function (event: any) {
     return {
       statusCode: 200,
       headers: { "Content-Type": "text/html" },
-      body: `<!DOCTYPE html><html><head><style>body{background:#f7f7f7;background:-moz-linear-gradient(45deg,#f7f7f7 0,#eae0d5 100%);background:-webkit-linear-gradient(45deg,#f7f7f7 0,#eae0d5 100%);background:linear-gradient(45deg,#f7f7f7 0,#eae0d5 100%)}.header{background-image:url(efad1a91.jpg);height:400px;background-position:center center}h1{color:#e80410;color:rgba(232,4,16,.75);font-family:'Covered By Your Grace',sans-serif;font-size:100px;line-height:76px;position:relative;text-align:center;top:20%}h2{color:#e4bb97;Background-color:#aa8eb5;font-family:Raleway,sans-serif;font-size:28px;font-weight:500;text-align:left;text-transform:uppercase}ul{margin:0 auto;padding:0;width:50%}li{border-bottom:1px solid #e4bb97;list-style:none;margin:100px 0;padding-bottom:60px}p{color:#444;line-height:32px;font-family:Raleway,sans-serif;font-size:20px;font-weight:100}a{color:#214e34;font-family:Raleway,sans-serif;font-size:13px;font-weight:900;text-align:left;text-transform:uppercase;text-decoration:none;letter-spacing:2px}</style><title>Serveur</title></head><body><h1>Serveur lanc&eacute; avec succ&egrave;s</h1><p>IP du serveur: ${resIP.Reservations?.[0].Instances?.[0].PublicIpAddress}</p><p>Montant facture mensuel: ${totalBilling}$</p><p>Temps de jeu approximatif mensuel: ${costEstimate.ResultsByTime?.[0].Groups?.[2].Metrics?.UsageQuantity.Amount} heures</p></body></html>`
+      body: `<!DOCTYPE html><html><head><link rel="stylesheet" href="${styleSheetLink}" type="text/css"><title>Server</title></head><body><h1>Server successfully started</h1><p>Server IP: ${resIP.Reservations?.[0].Instances?.[0].PublicIpAddress}</p><p>Monthly invoice amount: ${totalBilling}$</p><p>Approximate monthly playing time: ${costEstimate.ResultsByTime?.[0].Groups?.[2].Metrics?.UsageQuantity.Amount} hours</p></body></html>`
     }
   } catch (err) {
-    console.log(JSON.stringify(err));
     return {
       statusCode: 200,
-      headers: { "Content-Type": "text/json" },
-      body: JSON.stringify({ message: "Failed to start satisfactory server", response: JSON.stringify(err) })
+      headers: { "Content-Type": "text/html" },
+      body: `<!DOCTYPE html><html><head><link rel="stylesheet" href="${styleSheetLink}" type="text/css"><title>Server</title></head><body><h1>Failed to start Satisfactory server</h1><pre>${JSON.stringify(err)}</pre></body></html>`
     }
   }
 }
