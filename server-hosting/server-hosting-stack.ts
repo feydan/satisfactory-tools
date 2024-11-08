@@ -69,29 +69,6 @@ export class ServerHostingStack extends Stack {
     securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(15000), "Beacon port")
     securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(15777), "Query port")
 
-    const server = new ec2.Instance(this, `${prefix}Server`, {
-      // 4 vCPU, 16 GB RAM should be enough for most factories
-      instanceType: new ec2.InstanceType("r7i.xlarge"),
-      // get exact ami from parameter exported by canonical
-      // https://discourse.ubuntu.com/t/finding-ubuntu-images-with-the-aws-ssm-parameter-store/15507
-      machineImage: ec2.MachineImage.fromSsmParameter("/aws/service/canonical/ubuntu/server/20.04/stable/current/amd64/hvm/ebs-gp2/ami-id"),
-      // storage for steam, satisfactory and save files
-      blockDevices: [
-        {
-          deviceName: "/dev/sda1",
-          volume: ec2.BlockDeviceVolume.ebs(50, {volumeType: ec2.EbsDeviceVolumeType.GP3}),
-        }
-      ],
-      // server needs a public ip to allow connections
-      vpcSubnets,
-      userDataCausesReplacement: true,
-      vpc,
-      securityGroup,
-    })
-
-    // Add Base SSM Permissions, so we can use AWS Session Manager to connect to our server, rather than external SSH.
-    server.role.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'));
-
     //////////////////////////////
     // Configure save bucket
     //////////////////////////////
@@ -109,49 +86,127 @@ export class ServerHostingStack extends Stack {
 
     // allow server to read and write save files to and from save bucket
     const savesBucket = findOrCreateBucket(Config.bucketName);
-    savesBucket.grantReadWrite(server.role);
-
-    //////////////////////////////
-    // Configure instance startup
-    //////////////////////////////
-
-    // add aws cli
-    // needed to download install script asset and
-    // perform backups to s3
-    server.userData.addCommands('sudo apt-get install unzip -y')
-    server.userData.addCommands('curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && ./aws/install')
 
     // package startup script and grant read access to server
     const startupScript = new s3_assets.Asset(this, `${Config.prefix}InstallAsset`, {
       path: './server-hosting/scripts/install.sh'
-    });
-    startupScript.grantRead(server.role);
-
-    // download and execute startup script
-    // with save bucket name as argument
-    const localPath = server.userData.addS3DownloadCommand({
-      bucket: startupScript.bucket,
-      bucketKey: startupScript.s3ObjectKey,
-    });
-    server.userData.addExecuteFileCommand({
-      filePath: localPath,
-      arguments: `${savesBucket.bucketName} ${Config.useExperimentalBuild}`
     });
 
     //////////////////////////////
     // Add api to start server
     //////////////////////////////
 
-    if (Config.restartApi && Config.restartApi === true) {
-      const startServerLambda = new lambda_nodejs.NodejsFunction(this, `${Config.prefix}StartServerLambda`, {
-        entry: './server-hosting/lambda/index.ts',
-        description: "Restart game server",
+    const rootServerLambda = new lambda_nodejs.NodejsFunction(this, `${Config.prefix}StartServerLambda`, {
+      entry: './server-hosting/lambda/index.ts',
+      description: "Root server page",
+      timeout: Duration.seconds(20),
+      runtime: Runtime.NODEJS_20_X,
+      memorySize: 512,
+    })
+
+    const statement = new iam.PolicyStatement({
+      actions: ['lambda:InvokeFunction', 'lambda:GetFunctionUrlConfig'],
+      resources: ["*"]
+    });
+    const policy = new iam.Policy(this, `${Config.prefix}StartServerLambda_policy`, {
+      statements: [statement]
+    });
+
+    policy.attachToRole(<iam.IRole>rootServerLambda.role);
+
+    rootServerLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: [
+        "ec2:DescribeInstances"
+      ],
+      resources: [
+        '*'
+      ]
+    }))
+
+    rootServerLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: [
+        "ce:GetCostAndUsage"
+      ],
+      resources: [
+        '*'
+      ]
+    }))
+
+    rootServerLambda.addFunctionUrl({
+      authType: FunctionUrlAuthType.NONE
+    })
+
+    Config.instanceList.forEach(serverConfig => {
+
+      const server = new ec2.Instance(this, `${prefix}Server_${serverConfig.name}`, {
+        // 4 vCPU, 16 GB RAM should be enough for most factories
+        instanceType: new ec2.InstanceType(serverConfig.type),
+        // get exact ami from parameter exported by canonical
+        // https://discourse.ubuntu.com/t/finding-ubuntu-images-with-the-aws-ssm-parameter-store/15507
+        machineImage: ec2.MachineImage.fromSsmParameter("/aws/service/canonical/ubuntu/server/20.04/stable/current/amd64/hvm/ebs-gp2/ami-id"),
+        // storage for steam, satisfactory and save files
+        blockDevices: [
+          {
+            deviceName: "/dev/sda1",
+            volume: ec2.BlockDeviceVolume.ebs(50, { volumeType: ec2.EbsDeviceVolumeType.GP3 }),
+          }
+        ],
+        // server needs a public ip to allow connections
+        vpcSubnets,
+        userDataCausesReplacement: true,
+        vpc,
+        securityGroup,
+      })
+
+      // Add Base SSM Permissions, so we can use AWS Session Manager to connect to our server, rather than external SSH.
+      server.role.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'));
+
+      savesBucket.grantReadWrite(server.role);
+
+      //////////////////////////////
+      // Configure instance startup
+      //////////////////////////////
+
+      // add aws cli
+      // needed to download install script asset and
+      // perform backups to s3
+      server.userData.addCommands('sudo apt-get install unzip -y')
+      server.userData.addCommands('curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && ./aws/install')
+
+      startupScript.grantRead(server.role);
+
+      // download and execute startup script
+      // with save bucket name as argument
+      const localPath = server.userData.addS3DownloadCommand({
+        bucket: startupScript.bucket,
+        bucketKey: startupScript.s3ObjectKey,
+      });
+      server.userData.addExecuteFileCommand({
+        filePath: localPath,
+        arguments: `${savesBucket.bucketName} ${Config.useExperimentalBuild}`
+      });
+
+      const startServerLambda = new lambda_nodejs.NodejsFunction(this, `${Config.prefix}Lambda_${serverConfig.name}`, {
+        entry: './server-hosting/lambda/start_server.ts',
+        description: `Start game server ${serverConfig.name}`,
         timeout: Duration.seconds(20),
         runtime: Runtime.NODEJS_20_X,
         environment: {
-          INSTANCE_ID: server.instanceId
+          INSTANCE_ID: server.instanceId,
+          NAME: serverConfig.name,
+          DESCRIPTION: serverConfig.description
         }
       })
+
+      const statement = new iam.PolicyStatement({
+        actions: ['lambda:InvokeFunction', "lambda:GetFunctionUrlConfig"],
+        resources: ["*"]
+      });
+      const policy = new iam.Policy(this, `${Config.prefix}Lambda_${serverConfig.name}_policy`, {
+        statements: [statement]
+      });
+
+      policy.attachToRole(<iam.IRole>startServerLambda.role);
 
       startServerLambda.addToRolePolicy(new iam.PolicyStatement({
         actions: [
@@ -170,19 +225,30 @@ export class ServerHostingStack extends Stack {
           '*'
         ]
       }))
-      
-      startServerLambda.addToRolePolicy(new iam.PolicyStatement({
-        actions: [
-          "ce:GetCostAndUsage"
-        ],
-        resources: [
-          '*'
-        ]
-      }))
 
-      startServerLambda.addFunctionUrl({
+
+      const functionUrl = startServerLambda.addFunctionUrl({
         authType: FunctionUrlAuthType.NONE
       })
-    }
+
+      // WIP
+      // Have to be added manually, working on a way to do it without circular dependency error
+      // startServerLambda.addEnvironment("ROOT_FUNCTION_NAME", rootServerLambda.functionName)
+
+      serverConfig.functionURL = functionUrl.url
+      serverConfig.instanceID = server.instanceId
+    })
+
+    rootServerLambda.addEnvironment("SERVERS", JSON.stringify(Config.instanceList))
+
+    rootServerLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: [
+        'ec2:StartInstances',
+        'ec2:StopInstances'
+      ],
+      resources: Config.instanceList.map(instance => {
+        return `arn:aws:ec2:*:${Config.account}:instance/${instance.instanceID}`
+      })
+    }))
   }
 }

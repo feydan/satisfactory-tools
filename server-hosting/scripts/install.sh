@@ -90,6 +90,20 @@ su - ubuntu -c "crudini --set '$ENGINE_INI_PATH' '/script/engine.streamingsettin
 su - ubuntu -c "crudini --set '$ENGINE_INI_PATH' '/script/engine.streamingsettings' net.MaxRepArraySize 65535"
 su - ubuntu -c "crudini --set '$ENGINE_INI_PATH' '/script/engine.streamingsettings' net.MaxRepArrayMemory 65535"
 
+# Script for pulling last known saves / server config 
+cat <<EOF >/home/ubuntu/pullsaves.sh
+#!/bin/sh
+
+mkdir -p $EPIC_SAVE_DIR $CONFIG_DIR $BLUEPRINT_SAVE_DIR
+/usr/local/bin/aws s3 sync s3://$S3_SAVE_BUCKET/blueprints $BLUEPRINT_SAVE_DIR
+/usr/local/bin/aws s3 sync s3://$S3_SAVE_BUCKET/saves $EPIC_SAVE_DIR
+/usr/local/bin/aws s3 sync s3://$S3_SAVE_BUCKET/config $CONFIG_DIR
+mkdir -p $CONFIG_SERVER_DIR
+EOF
+
+chmod +x /home/ubuntu/pullsaves.sh
+chown ubuntu:ubuntu /home/ubuntu/pullsaves.sh
+
 # enable as server so it stays up and start: https://satisfactory.fandom.com/wiki/Dedicated_servers/Running_as_a_Service
 cat <<EOF >/etc/systemd/system/satisfactory.service
 [Unit]
@@ -100,6 +114,7 @@ After=syslog.target network.target nss-lookup.target network-online.target
 [Service]
 Environment="LD_LIBRARY_PATH=./linux64"
 ExecStartPre=$STEAM_INSTALL_SCRIPT
+ExecStartPre=/home/ubuntu/pullsaves.sh
 ExecStart=$STEAM_DIR/FactoryServer.sh
 User=ubuntu
 Group=ubuntu

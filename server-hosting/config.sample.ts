@@ -29,5 +29,14 @@ export const Config = {
      // If vpc is not given specify subnet for default vpc
      subnetId: '',
      // Needed if subnetId is specified (i.e. us-west-2a)
-     availabilityZone: ''
+     availabilityZone: '',
+    // List of servers that will be available on the start page. You can list multiple instance type
+    // and should which one should be launched depending on player number
+    // Format should be the following
+    // {
+    //   "name": "", Instance name
+    //   "type": "", Instance type
+    //   "description": "" Description
+    // }
+    instanceList: []
 };

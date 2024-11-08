@@ -11,3 +11,4 @@ cdk.context.json
 
 # Configuration
 **/*config.ts
+*.html
